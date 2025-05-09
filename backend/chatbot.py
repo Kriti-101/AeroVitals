@@ -7,7 +7,7 @@ HF_TOKEN = os.getenv("HF_TOKEN")  # stored in your .env file
 
 API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 headers = {
-    "Authorization": f"Bearer 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",
+    "Authorization": f"Bearer {HF_TOKEN}",
     "Content-Type": "application/json"
 }
 
