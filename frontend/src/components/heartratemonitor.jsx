@@ -10,8 +10,13 @@ const HeartRateMonitor = () => {
   const [volume, setVolume] = useState(0.5);
   const soundRef = useRef(null);
 
+  // Range configuration
+  const MIN_BPM = 40;
+  const MAX_BPM = 200;
+  const NORMAL_MIN = 60;
+  const NORMAL_MAX = 100;
+
   useEffect(() => {
-    // Initialize the sound only once
     soundRef.current = new Howl({
       src: [musicFile],
       loop: true,
@@ -19,7 +24,6 @@ const HeartRateMonitor = () => {
     });
 
     return () => {
-      // Cleanup on component unmount
       if (soundRef.current) {
         soundRef.current.unload();
       }
@@ -27,7 +31,6 @@ const HeartRateMonitor = () => {
   }, []);
 
   useEffect(() => {
-    // Update volume when it changes
     if (soundRef.current) {
       soundRef.current.volume(volume);
     }
@@ -60,9 +63,24 @@ const HeartRateMonitor = () => {
     const hr = parseInt(rate);
     if (isNaN(hr)) return null;
     
-    if (hr < 60) return { text: 'Low', color: '#3B82F6', emoji: '⬇️' };
-    if (hr > 100) return { text: 'High', color: '#EF4444', emoji: '⬆️' };
-    return { text: 'Normal', color: '#10B981', emoji: '✅' };
+    // Calculate position (40-200 bpm range)
+    const position = ((hr - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 100;
+    
+    if (hr < NORMAL_MIN) return { 
+      text: 'LOW HEART RATE', 
+      color: '#3B82F6',
+      position: Math.max(0, position) // Ensure position doesn't go below 0
+    };
+    if (hr > NORMAL_MAX) return { 
+      text: 'HIGH HEART RATE', 
+      color: '#EF4444',
+      position: Math.min(100, position) // Ensure position doesn't exceed 100
+    };
+    return { 
+      text: 'NORMAL HEART RATE', 
+      color: '#10B981',
+      position: position
+    };
   };
 
   const toggleMusic = () => {
@@ -81,43 +99,127 @@ const HeartRateMonitor = () => {
     setVolume(newVolume);
   };
 
+  // Generate tick marks for the scale
+  const generateScaleTicks = () => {
+    const ticks = [];
+    for (let bpm = 40; bpm <= 200; bpm += 20) {
+      const position = ((bpm - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 100;
+      ticks.push(
+        <div 
+          key={bpm} 
+          style={{
+            position: 'absolute',
+            left: `${position}%`,
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ height: '8px', width: '1px', backgroundColor: '#6B7280' }}></div>
+          <div style={{ fontSize: '10px', marginTop: '4px' }}>{bpm}</div>
+        </div>
+      );
+    }
+    return ticks;
+  };
+
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>💓 Heart Rate Monitor</h3>
+      <h2 style={styles.title}>HEART RATE MONITOR</h2>
       
+      {/* Heart Rate Display */}
+      <div style={styles.rateDisplay}>
+        <div style={styles.rateValue}>{heartRate || '--'}</div>
+        <div style={styles.rateUnit}>bpm</div>
+        {status && (
+          <div style={{...styles.statusText, color: status.color}}>
+            {status.text}
+          </div>
+        )}
+      </div>
+      
+      {/* Color-coded Bar Indicator */}
+      <div style={styles.barContainer}>
+        <div style={styles.scaleContainer}>
+          {generateScaleTicks()}
+          {/* Pointer on the number line */}
+          {status && (
+            <div 
+              style={{
+                position: 'absolute',
+                left: `${status.position}%`,
+                bottom: '16px',
+                transform: 'translateX(-50%)',
+                zIndex: 10,
+              }}
+            >
+              <div style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: status.color,
+                border: '2px solid white',
+                boxShadow: '0 0 4px rgba(0,0,0,0.3)',
+              }}></div>
+            </div>
+          )}
+        </div>
+        <div style={styles.barBackground}>
+          {/* Gradient from blue (low) to green (normal) to red (high) */}
+          <div style={{
+            ...styles.barFill,
+            background: `linear-gradient(
+              90deg, 
+              #3B82F6 0%, 
+              #3B82F6 ${(NORMAL_MIN - MIN_BPM) / (MAX_BPM - MIN_BPM) * 100}%, 
+              #10B981 ${(NORMAL_MIN - MIN_BPM) / (MAX_BPM - MIN_BPM) * 100}%, 
+              #10B981 ${(NORMAL_MAX - MIN_BPM) / (MAX_BPM - MIN_BPM) * 100}%, 
+              #EF4444 ${(NORMAL_MAX - MIN_BPM) / (MAX_BPM - MIN_BPM) * 100}%, 
+              #EF4444 100%
+            )`
+          }}></div>
+          {status && (
+            <div 
+              style={{
+                ...styles.barPointer,
+                left: `${status.position}%`,
+              }}
+            >
+              <div style={{...styles.pointerArrow, borderBottomColor: status.color}}></div>
+              <div style={{...styles.pointerLine, backgroundColor: status.color}}></div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Input and Controls */}
       <div style={styles.inputContainer}>
         <input
           type="number"
           value={heartRate}
           onChange={(e) => setHeartRate(e.target.value)}
-          placeholder="Enter heart rate (bpm)"
+          placeholder={`Enter heart rate (${MIN_BPM}-${MAX_BPM} bpm)`}
           style={styles.input}
+          min={MIN_BPM}
+          max={MAX_BPM}
         />
-        <button onClick={checkHeartRate} style={styles.button}>Check</button>
+        <button onClick={checkHeartRate} style={styles.button}>CHECK</button>
       </div>
-
-      {status && (
-        <div style={{...styles.statusBox, backgroundColor: status.color + '20', borderColor: status.color}}>
-          <h3 style={{color: status.color, margin: 0}}>
-            {status.emoji} {status.text} Heart Rate
-          </h3>
-          <p style={{margin: '5px 0', fontWeight: 'bold'}}>{heartRate} bpm</p>
-        </div>
-      )}
 
       <div style={styles.musicControls}>
         <button 
           onClick={toggleMusic} 
           style={{
             ...styles.musicButton,
-            backgroundColor: isPlaying ? '#ef4444' : '#10B981'
+            backgroundColor: isPlaying ? '#EF4444' : '#10B981'
           }}
         >
-          {isPlaying ? '⏸ Pause Music' : '▶️ Play Music'}
+          {isPlaying ? '⏸ PAUSE MUSIC' : '▶️ PLAY MUSIC'}
         </button>
         
         <div style={styles.volumeControl}>
-          <label>Volume:</label>
+          <label style={styles.volumeLabel}>VOLUME:</label>
           <input
             type="range"
             min="0"
@@ -129,90 +231,145 @@ const HeartRateMonitor = () => {
           />
         </div>
       </div>
-
-      {isPlaying && <p style={styles.musicNote}>🎶 Calming music is playing...</p>}
     </div>
   );
 };
 
 const styles = {
   container: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#FFFFFF',
     padding: '25px',
     borderRadius: '16px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    maxWidth: '450px',
-    margin: '20px auto',
-    textAlign: 'center',
-    fontFamily: 'Arial, sans-serif'
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    maxWidth: '500px',
+    margin: '0 auto',
+    fontFamily: "'Segoe UI', system-ui, sans-serif",
   },
   title: {
-    color: '#0369a1',
-    marginBottom: '20px'
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: '25px',
+    fontSize: '18px',
+    fontWeight: '600',
+  },
+  rateDisplay: {
+    textAlign: 'center',
+    marginBottom: '15px',
+  },
+  rateValue: {
+    fontSize: '48px',
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: '1',
+  },
+  rateUnit: {
+    fontSize: '16px',
+    color: '#6B7280',
+    marginTop: '4px',
+  },
+  statusText: {
+    fontSize: '14px',
+    fontWeight: '600',
+    marginTop: '10px',
+    textTransform: 'uppercase',
+  },
+  barContainer: {
+    margin: '30px 0',
+    position: 'relative',
+  },
+  scaleContainer: {
+    position: 'relative',
+    height: '30px',
+    width: '100%',
+    marginBottom: '5px',
+  },
+  barBackground: {
+    height: '12px',
+    borderRadius: '6px',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    width: '100%',
+  },
+  barPointer: {
+    position: 'absolute',
+    top: '-12px',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  pointerArrow: {
+    width: 0,
+    height: 0,
+    borderLeft: '10px solid transparent',
+    borderRight: '10px solid transparent',
+    borderBottom: '12px solid #36827F', // Add the color here
+    marginBottom: '4px',
+  },
+
+  pointerLine: {
+    width: '2px',
+    height: '12px',
   },
   inputContainer: {
     display: 'flex',
     gap: '10px',
     marginBottom: '20px',
-    justifyContent: 'center'
   },
   input: {
-    padding: '12px',
-    fontSize: '16px',
-    width: '60%',
+    flex: '1',
+    padding: '12px 16px',
+    fontSize: '14px',
     borderRadius: '8px',
-    border: '2px solid #bae6fd',
+    border: '1px solid #E5E7EB',
     outline: 'none',
-    transition: 'border 0.3s',
   },
   button: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3B82F6',
     color: 'white',
     border: 'none',
-    padding: '12px 24px',
-    fontSize: '16px',
+    padding: '12px 20px',
+    fontSize: '14px',
     borderRadius: '8px',
     cursor: 'pointer',
-    fontWeight: 'bold',
-    transition: 'background-color 0.3s',
-  },
-  statusBox: {
-    padding: '15px',
-    borderRadius: '10px',
-    margin: '20px 0',
-    border: '2px solid',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    fontWeight: '600',
   },
   musicControls: {
-    marginTop: '25px',
+    backgroundColor: '#F9FAFB',
+    borderRadius: '12px',
     padding: '15px',
-    backgroundColor: '#e0f2fe',
-    borderRadius: '10px'
   },
   musicButton: {
-    backgroundColor: '#0ea5e9',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
+    width: '100%',
+    padding: '12px',
     borderRadius: '8px',
+    border: 'none',
     cursor: 'pointer',
-    fontSize: '15px',
-    marginBottom: '10px'
+    fontWeight: '600',
+    fontSize: '14px',
+    color: 'white',
+    marginBottom: '12px',
   },
   volumeControl: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px'
+    gap: '10px',
+  },
+  volumeLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#4B5563',
   },
   volumeSlider: {
-    width: '100px'
+    flex: '1',
+    height: '4px',
+    borderRadius: '2px',
+    backgroundColor: '#E5E7EB',
+    outline: 'none',
   },
-  musicNote: {
-    marginTop: '15px',
-    fontStyle: 'italic',
-    color: '#64748b'
-  }
 };
 
 export default HeartRateMonitor;
