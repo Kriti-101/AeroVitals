@@ -2,73 +2,118 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 const Chatbot = () => {
-  const [messages, setMessages] = useState([]);  // Store chat history
-  const [userMessage, setUserMessage] = useState('');  // Store the user's current message
-  const [loading, setLoading] = useState(false);  // For loading state during the API request
+  const [messages, setMessages] = useState([]);
+  const [userMessage, setUserMessage] = useState('');
 
-  // Handle sending a message
   const sendMessage = async (e) => {
     e.preventDefault();
 
-    // Check if the input is empty before sending a message
-    if (!userMessage.trim()) {
-      return;  // Don't send an empty message
-    }
-
-    // Add user message to chat history
     const newMessages = [...messages, { sender: 'user', text: userMessage }];
     setMessages(newMessages);
-    setUserMessage('');  // Clear the input field
-    setLoading(true);  // Set loading state while awaiting response
+    setUserMessage('');
 
     try {
-      // Send the user's message to the Flask backend
       const response = await axios.post('http://localhost:5000/chat', {
-        message: userMessage,  // message from the user input
+        message: userMessage,
       });
 
-      // Get the chatbot's response
       const chatbotReply = response.data.response;
-
-      // Add chatbot's reply to chat history
       setMessages([...newMessages, { sender: 'chatbot', text: chatbotReply }]);
     } catch (error) {
-      console.error("There was an error!", error);
-      // Add error message to chat history
-      setMessages([...newMessages, { sender: 'chatbot', text: 'Sorry, there was an issue with the chatbot.' }]);
-    } finally {
-      setLoading(false);  // Reset loading state after the response
+      console.error("Error communicating with chatbot:", error);
     }
   };
 
   return (
-    <div>
-      <h2>Chat with the chatbot</h2>
-      <div style={{ height: '300px', overflowY: 'scroll', border: '1px solid #ddd', padding: '10px' }}>
+    <div style={styles.container}>
+      <h2 style={styles.header}>🛫 AeroVitals Chatbot</h2>
+
+      <div style={styles.chatBox}>
         {messages.map((msg, index) => (
-          <div key={index} style={{ textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
-            <strong>{msg.sender === 'user' ? 'You' : 'Chatbot'}:</strong>
-            <p>{msg.text}</p>
+          <div
+            key={index}
+            style={{
+              ...styles.message,
+              alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+              backgroundColor: msg.sender === 'user' ? '#b74545' : '#683B4A',
+              color: '#fff',
+              borderTopLeftRadius: msg.sender === 'user' ? 16 : 4,
+              borderTopRightRadius: msg.sender === 'user' ? 4 : 16,
+            }}
+          >
+            <strong>{msg.sender === 'user' ? 'You' : 'Bot'}:</strong> {msg.text}
           </div>
         ))}
-        {/* Scroll to the bottom automatically when messages are added */}
-        <div ref={(el) => el && (el.scrollTop = el.scrollHeight)} />
       </div>
 
-      <form onSubmit={sendMessage} style={{ display: 'flex', marginTop: '10px' }}>
+      <form onSubmit={sendMessage} style={styles.inputArea}>
         <input
           type="text"
+          placeholder="Type your message..."
           value={userMessage}
           onChange={(e) => setUserMessage(e.target.value)}
-          placeholder="Type your message"
-          style={{ width: '80%', padding: '10px' }}
+          style={styles.input}
         />
-        <button type="submit" style={{ padding: '10px', backgroundColor: '#4CAF50', color: 'white' }}>
-          {loading ? 'Sending...' : 'Send'}
-        </button>
+        <button type="submit" style={styles.button}>Send</button>
       </form>
     </div>
   );
 };
 
+const styles = {
+  container: {
+    maxWidth: '600px',
+    margin: '40px auto',
+    padding: '20px',
+    backgroundColor: '#B5FFE1',
+    borderRadius: '16px',
+    boxShadow: '0 0 15px rgba(0, 0, 0, 0.1)',
+    fontFamily: 'Arial, sans-serif',
+  },
+  header: {
+    textAlign: 'center',
+    color: '#36827F',
+    marginBottom: '20px',
+  },
+  chatBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    height: '350px',
+    overflowY: 'auto',
+    padding: '10px',
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    border: '2px solid #36827F',
+  },
+  message: {
+    maxWidth: '75%',
+    padding: '12px',
+    borderRadius: '16px',
+    fontSize: '14px',
+  },
+  inputArea: {
+    display: 'flex',
+    marginTop: '16px',
+    gap: '10px',
+  },
+  input: {
+    flexGrow: 1,
+    padding: '10px 12px',
+    fontSize: '16px',
+    border: '2px solidrgb(48, 185, 249)',
+    borderRadius: '8px',
+  },
+  button: {
+    backgroundColor: '#0E85FB',
+    color: 'white',
+    border: 'none',
+    padding: '10px 18px',
+    borderRadius: '8px',
+    fontSize: '16px',
+    cursor: 'pointer',
+  },
+};
+
 export default Chatbot;
+
