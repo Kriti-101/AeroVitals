@@ -6,6 +6,7 @@ import Chatbot from './components/chatbot';
 import MusicPlayer from './components/music';
 import SleepDisorderForm from './components/SleepDisorderForm';
 import StressLevelForm from './components/StressLevelForm';
+import LandingPage from './components/LandingPage';
 import { FaComments, FaHeartbeat, FaBed, FaPlane } from 'react-icons/fa';
 
 // Hamburger icon
@@ -152,64 +153,69 @@ function AppContent() {
           }
         }
       `}</style>
-      <div style={styles.appContainer}>
-        <Hamburger onClick={() => setSidebarOpen((v) => !v)} isOpen={sidebarOpen} />
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div style={{ ...styles.contentArea, marginLeft: sidebarOpen ? 240 : 0, transition: 'margin-left 0.3s', position: 'relative', zIndex: 1 }}>
-          <header style={styles.header}>
-            <div style={{ position: 'relative', width: '100%', height: 60 }}>
-              <motion.div
-                key={location.pathname}
-                initial={{ x: -80, rotate: -10, opacity: 0.7 }}
-                animate={{ x: 'calc(100vw - 320px)', rotate: 10, opacity: 1 }}
-                exit={{ x: '100vw', opacity: 0 }}
-                transition={{ duration: 1.2, type: 'spring', bounce: 0.3 }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  fontSize: 40,
-                  color: '#fff',
-                  zIndex: 2,
-                  filter: 'drop-shadow(0 2px 8px #2563eb88)'
-                }}
-              >
-                <FaPlane />
-              </motion.div>
-              <h1 style={styles.title}>AeroVitals</h1>
-              <p style={styles.subtitle}>Your in-flight personal health monitoring platform</p>
-            </div>
-          </header>
-          <main style={styles.mainContent}>
-            <Routes>
-              <Route path="/" element={
-                <div style={styles.flexRow}>
-                  <div style={styles.column}>
-                    <div style={styles.card}>
-                      <h2 style={{ display: 'flex', alignItems: 'center', fontSize: '1.7rem', fontWeight: 700, color: '#2563eb', marginBottom: '1.5rem' }}>
-                        <FaPlane style={{ marginRight: 10 }} /> AeroVitals
-                      </h2>
-                      <h2 style={styles.cardTitle}>Heart Rate Monitor</h2>
-                      <HeartRateMonitor />
-                    </div>
-                  </div>
-                  <div style={styles.column}>
-                    <div style={styles.card}>
-                      <h2 style={styles.cardTitle}>First Aid Assistant</h2>
-                      <Chatbot />
-                    </div>
-                  </div>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard" element={
+          <div style={styles.appContainer}>
+            <Hamburger onClick={() => setSidebarOpen((v) => !v)} isOpen={sidebarOpen} />
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <div style={{ ...styles.contentArea, marginLeft: sidebarOpen ? 240 : 0, transition: 'margin-left 0.3s', position: 'relative', zIndex: 1 }}>
+              <header style={styles.header}>
+                <div style={{ position: 'relative', width: '100%', height: 60 }}>
+                  <motion.div
+                    key={location.pathname}
+                    initial={{ x: -80, rotate: -10, opacity: 0.7 }}
+                    animate={{ x: 'calc(100vw - 320px)', rotate: 10, opacity: 1 }}
+                    exit={{ x: '100vw', opacity: 0 }}
+                    transition={{ duration: 1.2, type: 'spring', bounce: 0.3 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      fontSize: 40,
+                      color: '#fff',
+                      zIndex: 2,
+                      filter: 'drop-shadow(0 2px 8px #2563eb88)'
+                    }}
+                  >
+                    <FaPlane />
+                  </motion.div>
+                  <h1 style={styles.title}>AeroVitals</h1>
+                  <p style={styles.subtitle}>Your in-flight personal health monitoring platform</p>
                 </div>
-              } />
-              <Route path="/sleep-disorder" element={<SleepDisorderForm />} />
-              <Route path="/stress-level" element={<StressLevelForm />} />
-            </Routes>
-          </main>
-          <footer style={styles.footer}>
-            <p>© {new Date().getFullYear()} AeroVitals</p>
-          </footer>
-        </div>
-      </div>
+              </header>
+              <main style={styles.mainContent}>
+                <Routes>
+                  <Route path="/dashboard" element={
+                    <div style={styles.flexRow}>
+                      <div style={styles.column}>
+                        <div style={styles.card}>
+                          <h2 style={{ display: 'flex', alignItems: 'center', fontSize: '1.7rem', fontWeight: 700, color: '#2563eb', marginBottom: '1.5rem' }}>
+                            <FaPlane style={{ marginRight: 10 }} /> AeroVitals
+                          </h2>
+                          <h2 style={styles.cardTitle}>Heart Rate Monitor</h2>
+                          <HeartRateMonitor />
+                        </div>
+                      </div>
+                      <div style={styles.column}>
+                        <div style={styles.card}>
+                          <h2 style={styles.cardTitle}>First Aid Assistant</h2>
+                          <Chatbot />
+                        </div>
+                      </div>
+                    </div>
+                  } />
+                  <Route path="/sleep-disorder" element={<SleepDisorderForm />} />
+                  <Route path="/stress-level" element={<StressLevelForm />} />
+                </Routes>
+              </main>
+              <footer style={styles.footer}>
+                <p>© {new Date().getFullYear()} AeroVitals</p>
+              </footer>
+            </div>
+          </div>
+        } />
+      </Routes>
     </div>
   );
 }
