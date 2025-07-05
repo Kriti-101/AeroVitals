@@ -43,28 +43,95 @@ def heart_rate():
 
 @app.route('/predict_sleep_disorder', methods=['POST'])
 def predict_sleep_disorder():
-    data = request.json  # expects a dict of features
-    X = pd.DataFrame([data])
-    pred = sleep_model.predict(X)[0]
-    if sleep_le:
-        pred = sleep_le.inverse_transform([pred])[0]
-    # Convert to Python str or int for JSON serialization
-    if hasattr(pred, 'item'):
-        pred = pred.item()
-    pred = str(pred)
-    return jsonify({'prediction': pred})
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Define expected columns for sleep disorder prediction
+        expected_columns = [
+            'Age', 'Gender', 'Occupation', 'Sleep Duration', 'Quality of Sleep',
+            'Physical Activity Level', 'Stress Level', 'BMI Category', 'Blood Pressure',
+            'Heart Rate', 'Daily Steps', 'Sleep Disorder'
+        ]
+        
+        # Check for missing columns and provide defaults
+        for col in expected_columns:
+            if col not in data:
+                if col == 'Blood Pressure':
+                    data[col] = 'Normal'  # Default value
+                elif col == 'BMI Category':
+                    data[col] = 'Normal Weight'
+                elif col == 'Gender':
+                    data[col] = 'Male'
+                elif col == 'Occupation':
+                    data[col] = 'Software Engineer'
+                elif col == 'Sleep Disorder':
+                    data[col] = 'None'
+                else:
+                    data[col] = 0  # Default numeric value
+        
+        X = pd.DataFrame([data])
+        pred = sleep_model.predict(X)[0]
+        
+        if sleep_le:
+            pred = sleep_le.inverse_transform([pred])[0]
+        
+        if hasattr(pred, 'item'):
+            pred = pred.item()
+        pred = str(pred)
+        
+        return jsonify({'prediction': pred})
+        
+    except Exception as e:
+        print(f"Error in sleep disorder prediction: {str(e)}")
+        return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
 
 @app.route('/predict_stress_level', methods=['POST'])
 def predict_stress_level():
-    data = request.json
-    X = pd.DataFrame([data])
-    pred = stress_model.predict(X)[0]
-    if stress_le:
-        pred = stress_le.inverse_transform([pred])[0]
-    if hasattr(pred, 'item'):
-        pred = pred.item()
-    pred = str(pred)
-    return jsonify({'prediction': pred})
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Define expected columns for stress level prediction
+        expected_columns = [
+            'Age', 'Gender', 'Occupation', 'Sleep Duration', 'Quality of Sleep',
+            'Physical Activity Level', 'Stress Level', 'BMI Category', 'Blood Pressure',
+            'Heart Rate', 'Daily Steps', 'Sleep Disorder'
+        ]
+        
+        # Check for missing columns and provide defaults
+        for col in expected_columns:
+            if col not in data:
+                if col == 'Blood Pressure':
+                    data[col] = 'Normal'  # Default value
+                elif col == 'BMI Category':
+                    data[col] = 'Normal Weight'
+                elif col == 'Gender':
+                    data[col] = 'Male'
+                elif col == 'Occupation':
+                    data[col] = 'Software Engineer'
+                elif col == 'Sleep Disorder':
+                    data[col] = 'None'
+                else:
+                    data[col] = 0  # Default numeric value
+        
+        X = pd.DataFrame([data])
+        pred = stress_model.predict(X)[0]
+        
+        if stress_le:
+            pred = stress_le.inverse_transform([pred])[0]
+        
+        if hasattr(pred, 'item'):
+            pred = pred.item()
+        pred = str(pred)
+        
+        return jsonify({'prediction': pred})
+        
+    except Exception as e:
+        print(f"Error in stress level prediction: {str(e)}")
+        return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -5,6 +5,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([]);
   const [userMessage, setUserMessage] = useState('');
   const [listening, setListening] = useState(false);
+  const [canStartListening, setCanStartListening] = useState(true);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
@@ -14,26 +15,52 @@ const Chatbot = () => {
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
+      recognition.continuous = false;
 
       recognition.onresult = (event) => {
+        console.log('Speech recognition result:', event.results);
         const transcript = event.results[0][0].transcript;
         setUserMessage(transcript);
         setListening(false);
+        // Add a small delay before allowing new speech recognition
+        setTimeout(() => {
+          setCanStartListening(true);
+        }, 500);
       };
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
+        console.error('Error details:', event);
         setListening(false);
+        setCanStartListening(true);
       };
 
       recognition.onend = () => {
+        console.log('Speech recognition ended');
         setListening(false);
+        setCanStartListening(true);
+      };
+
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
       };
 
       recognitionRef.current = recognition;
     } else {
+      console.error('Speech Recognition not supported in this browser. Try Chrome.');
       alert('Speech Recognition not supported in this browser. Try Chrome.');
     }
+
+    // Cleanup function
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    };
   }, []);
 
   const speak = (text) => {
@@ -43,9 +70,38 @@ const Chatbot = () => {
   };
 
   const startListening = () => {
+    if (recognitionRef.current && canStartListening) {
+      setCanStartListening(false);
+      // Stop any existing recognition first
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore errors if not already started
+      }
+      
+      // Small delay to ensure proper cleanup
+      setTimeout(() => {
+        try {
+          setListening(true);
+          recognitionRef.current.start();
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          setListening(false);
+          setCanStartListening(true);
+        }
+      }, 100);
+    }
+  };
+
+  const stopListening = () => {
     if (recognitionRef.current) {
-      setListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore errors
+      }
+      setListening(false);
+      setCanStartListening(true);
     }
   };
 
@@ -59,17 +115,22 @@ const Chatbot = () => {
     setUserMessage('');
 
     try {
+      console.log('Sending message to backend:', userMessage);
       const response = await axios.post('http://localhost:5000/chat', {
         message: userMessage,
       });
 
+      console.log('Backend response:', response.data);
       const chatbotReply = response.data.response;
       setMessages([...newMessages, { sender: 'chatbot', text: chatbotReply }]);
       speak(chatbotReply); // Read the chatbot response aloud
     } catch (error) {
       console.error("Error communicating with chatbot:", error);
+      setMessages([...newMessages, { sender: 'chatbot', text: 'Sorry, I cannot connect to the backend server. Please make sure the server is running.' }]);
     }
   };
+
+
 
   return (
     <div style={styles.container}>
@@ -104,11 +165,18 @@ const Chatbot = () => {
         <button type="submit" style={styles.button}>Send</button>
         <button
           type="button"
-          onClick={startListening}
-          style={{ ...styles.button, backgroundColor: listening ? '#FF5252' : '#2C98F0' }}
+          onClick={listening ? stopListening : startListening}
+          disabled={!canStartListening && !listening}
+          style={{ 
+            ...styles.button, 
+            backgroundColor: listening ? '#FF5252' : '#2C98F0',
+            opacity: (!canStartListening && !listening) ? 0.6 : 1,
+            cursor: (!canStartListening && !listening) ? 'not-allowed' : 'pointer'
+          }}
         >
-          🎤 {listening ? 'Listening...' : 'Speak'}
+          🎤 {listening ? 'Stop Listening' : 'Speak'}
         </button>
+
       </form>
     </div>
   );

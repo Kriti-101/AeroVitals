@@ -4,16 +4,13 @@ import speech_recognition as sr
 import pyttsx3
 from dotenv import load_dotenv
 
-# Load Hugging Face token from .env file
+# Load Groq API key from .env file
 load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# API settings
-API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}",
-    "Content-Type": "application/json"
-}
+# Groq API settings
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama3-8b-8192"  # Fast and reliable model
 
 # Initialize text-to-speech engine
 engine = pyttsx3.init()
@@ -32,29 +29,59 @@ def listen():
         audio = recognizer.listen(source)
         try:
             print("🧠 Recognizing...")
-            return recognizer.recognize_google(audio)
+            return recognizer.recognize_google(audio)  # type: ignore
         except sr.UnknownValueError:
             return "Sorry, I didn't catch that."
         except sr.RequestError:
             return "Speech recognition service is unavailable."
 
 def get_chatbot_response(user_input):
-    """Send user input to the Hugging Face model and return the response."""
-    payload = {
-        "inputs": f"<|system|>You are an inflight medical assistant.<|user|>{user_input}<|assistant|>",
-        "parameters": {"temperature": 0.7, "max_new_tokens": 256}
+    """Send user input to the Groq model and return the response."""
+    if not GROQ_API_KEY:
+        return "Error: GROQ_API_KEY not found in environment variables. Please set your Groq API key in the .env file."
+    
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
     }
-
-    response = requests.post(API_URL, headers=headers, json=payload)
-
-    if response.status_code == 200:
-        output = response.json()
-        return output[0]["generated_text"].split("<|assistant|>")[-1].strip()
-    else:
-        return f"[Error] {response.status_code}: {response.text}"
+    
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an inflight medical assistant. Provide helpful, accurate medical advice for passengers during flights. Be concise but thorough."
+            },
+            {
+                "role": "user",
+                "content": user_input
+            }
+        ],
+        "max_tokens": 500,
+        "temperature": 0.7
+    }
+    
+    try:
+        response = requests.post(GROQ_API_URL, headers=headers, json=payload)
+        
+        if response.status_code == 200:
+            output = response.json()
+            return output["choices"][0]["message"]["content"]
+        else:
+            return f"[Error] {response.status_code}: {response.text}"
+    except Exception as e:
+        return f"Error connecting to Groq API: {str(e)}"
 
 # Main loop for interaction
 if __name__ == "__main__":
+    # Check if GROQ_API_KEY is set
+    if not GROQ_API_KEY:
+        print("⚠️  Warning: GROQ_API_KEY not found in environment variables.")
+        print("Please create a .env file in the backend directory with:")
+        print("GROQ_API_KEY=your_groq_api_key_here")
+        print("Get your key from: https://console.groq.com/keys")
+        print("\nStarting in demo mode (will show error messages for API calls)...")
+    
     speak("Hello, I am your inflight medical assistant. How can I help you?")
     while True:
         user_input = listen()
