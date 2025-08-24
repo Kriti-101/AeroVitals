@@ -1,4 +1,4 @@
-# AeroVitals: aerovitals-clean.vercel.app
+# AeroVitals: https://aerovitals-clean.vercel.app/
 
 ## Real-Time Wearable Health Monitoring for In-Flight Safety
 
